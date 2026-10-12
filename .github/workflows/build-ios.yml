@@ -1,0 +1,41 @@
+name: Build Blear IPA (unsigned)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Detect scheme
+        run: |
+          SCHEME=$(xcodebuild -list -json -project Blear.xcodeproj | python3 -c "import sys,json; s=json.load(sys.stdin)['project']['schemes']; print('Blear' if 'Blear' in s else s[0])")
+          echo "SCHEME=$SCHEME" >> $GITHUB_ENV
+          echo "Using scheme: $SCHEME"
+
+      - name: Build (no code signing)
+        run: |
+          xcodebuild -project Blear.xcodeproj -scheme "$SCHEME" \
+            -configuration Release -sdk iphoneos \
+            -derivedDataPath build \
+            -skipMacroValidation -skipPackagePluginValidation \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            build
+
+      - name: Package IPA
+        run: |
+          APP=$(find build/Build/Products/Release-iphoneos -maxdepth 1 -name "*.app" | head -n 1)
+          mkdir -p Payload
+          cp -R "$APP" Payload/
+          zip -qr Blear.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Blear-ipa
+          path: Blear.ipa
