@@ -5,13 +5,12 @@ on:
 
 jobs:
   build:
-    runs-on: macos-15
+    runs-on: xcode-27
     steps:
       - uses: actions/checkout@v4
 
-      - uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: latest-stable
+      - name: Show Xcode version
+        run: xcodebuild -version
 
       - name: Detect scheme
         run: |
